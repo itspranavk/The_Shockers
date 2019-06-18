@@ -40,7 +40,7 @@ void loop() {
   
   float magAcc= getMagAccel(vAcc);
   spd+= magAcc*unitTime;
-  dist+= spd*unitTime;
+  dist+= spd*unitTime/(float)2;
 
   float heading= getHeading(vMag);
   

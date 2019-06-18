@@ -6,7 +6,8 @@ Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
 
 float unitTime;
-float spd;
+float spdPrev;
+float spdCurr;
 float dist;
 
 struct vect {
@@ -22,7 +23,8 @@ void setup() {
   setupMag();
   setupAccel();
   unitTime= (float)1 / (float)(16 * 10^6);
-  spd= 0;
+  spdCurr= 0;
+  spdPrev= 0;
   dist= 0;
 }
 
@@ -39,15 +41,16 @@ void loop() {
   Serial.print(vAcc.arr[2]);
   
   float magAcc= getMagAccel(vAcc);
-  spd+= magAcc*unitTime;
-  dist+= spd*unitTime/(float)2;
+  spdCurr= spdPrev + magAcc*unitTime;
+  dist+= (spdPrev+spdCurr)*unitTime/(float)2;
 
   float heading= getHeading(vMag);
   
-  Serial.print(spd);
+  Serial.print(spdCurr);
   Serial.print(dist);
   Serial.print(heading);
-  
+
+  spdPrev= spdCurr;
   delay(500);
 }
 

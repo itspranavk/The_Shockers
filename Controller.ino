@@ -1,9 +1,14 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>
+#include <Adafruit_NeoPixel.h>
 
 Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
+
+#define LED_PIN   6
+#define LED_COUNT 4
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
 
 float unitTime;
 float spdPrev;
@@ -22,6 +27,11 @@ void setup() {
   Serial.begin(9600);
   setupMag();
   setupAccel();
+  
+  strip.begin();
+  strip.show();
+  strip.setBrightness(50);
+  
   unitTime= (float)1 / (float)(16 * 10^6);
   spdCurr= 0;
   spdPrev= 0;
@@ -32,6 +42,11 @@ void loop() {
   Serial.print(getFanSpeedMultiplier(readTemp()));
   vect vAcc= getVectorAccel();
   vect vMag= getVectorMagne();
+  
+  setLightColor(0, strip.Color(255,   0,   0));
+  setLightColor(1, strip.Color(0, 255, 0));
+  setLightColor(2, strip.Color(0, 0, 255));
+  setLightColor(3, strip.Color(255, 255, 255));
   
   Serial.print(vMag.arr[0]);
   Serial.print(vMag.arr[1]);
@@ -116,4 +131,9 @@ float getHeading(vect vMag) {
     heading+= 360;
   }
   return heading;
+}
+
+void setLightColor(int iPixel, uint32_t color) {
+  strip.setPixelColor(iPixel, color);
+  strip.show();
 }

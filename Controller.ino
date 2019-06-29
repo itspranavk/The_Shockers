@@ -2,12 +2,14 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>
 #include <Adafruit_NeoPixel.h>
+#include <Adafruit_HMC5883_U.h>
 
 Adafruit_LSM303_Mag_Unified mag = Adafruit_LSM303_Mag_Unified(12345);
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
 
 #define LED_PIN   6
 #define LED_COUNT 8
+#define TCAADDR 0x70
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
 
 float unitTime;
@@ -15,6 +17,9 @@ float spdPrev;
 float spdCurr;
 float spdCurrAbs;
 float dist;
+const int PORT_TEMP_1 = 0;
+const int PORT_TEMP_2 = 1;
+const int PORT_TEMP_3 = 2;
 
 struct vect {
   float arr[3];
@@ -40,7 +45,11 @@ void setup() {
 }
 
 void loop() {
-  Serial.print(getFanSpeedMultiplier(readTemp()));
+  int temp1 = readTemp(PORT_TEMP_1);
+  int temp2 = readTemp(PORT_TEMP_2);
+  int temp3 = readTemp(PORT_TEMP_3);
+  
+  Serial.print(getFanSpeedMultiplier(temp1));
   vect vAcc= getVectorAccel();
   vect vMag= getVectorMagne();
   
@@ -79,7 +88,8 @@ void loop() {
   delay(500);
 }
 
-int readTemp() {
+int readTemp(uint8_t i) {
+  tcaselect(i);
   int temp = 20;
   return temp;
 }
@@ -177,4 +187,11 @@ String getHeadingText(float heading) {
 void setLightColor(int iPixel, uint32_t color) {
   strip.setPixelColor(iPixel, color);
   strip.show();
+}
+
+void tcaselect(uint8_t i) {
+  if (i > 7) return;
+  Wire.beginTransmission(TCAADDR);
+  Wire.write(1 << i);
+  Wire.endTransmission();  
 }

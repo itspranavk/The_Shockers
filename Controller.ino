@@ -12,6 +12,12 @@ Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
 #define TCAADDR 0x70
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
 
+struct vect {
+  float x;
+  float y;
+  float z;
+};
+
 float unitTime;
 float spdPrev;
 float spdCurr;
@@ -20,10 +26,6 @@ float dist;
 const int PORT_TEMP_1 = 0;
 const int PORT_TEMP_2 = 1;
 const int PORT_TEMP_3 = 2;
-
-struct vect {
-  float arr[3];
-};
 
 void setup() {
   
@@ -39,53 +41,69 @@ void setup() {
   strip.setBrightness(50);
   
   unitTime= (float)1 / (float)(16 * 10^6);
-  spdCurr= 0;
+  spdCurr = 0;
   spdPrev= 0;
   dist= 0;
 }
 
 void loop() {
-  int temp1 = readTemp(PORT_TEMP_1);
-  int temp2 = readTemp(PORT_TEMP_2);
-  int temp3 = readTemp(PORT_TEMP_3);
+//  int temp1 = readTemp(PORT_TEMP_1);
+//  int temp2 = readTemp(PORT_TEMP_2);
+//  int temp3 = readTemp(PORT_TEMP_3);
   
-  Serial.print(getFanSpeedMultiplier(temp1));
+//  Serial.print(getFanSpeedMultiplier(temp1));
   vect vAcc= getVectorAccel();
   vect vMag= getVectorMagne();
   
-  setLightColor(0, strip.Color(255,   0,   0));
-  setLightColor(1, strip.Color(0, 255, 0));
-  setLightColor(2, strip.Color(0, 0, 255));
-  setLightColor(3, strip.Color(255, 255, 255));
+//  setLightColor(0, strip.Color(255,   0,   0));
+//  setLightColor(1, strip.Color(0, 255, 0));
+//  setLightColor(2, strip.Color(0, 0, 255));
+//  setLightColor(3, strip.Color(255, 255, 255));
+//  
+//  setLightColor(4, strip.Color(255,   0,   0));
+//  setLightColor(5, strip.Color(0, 255, 0));
+//  setLightColor(6, strip.Color(0, 0, 255));
+//  setLightColor(7, strip.Color(255, 255, 255));
   
-  setLightColor(4, strip.Color(255,   0,   0));
-  setLightColor(5, strip.Color(0, 255, 0));
-  setLightColor(6, strip.Color(0, 0, 255));
-  setLightColor(7, strip.Color(255, 255, 255));
-  
-  Serial.print("Vector magnetometer: "); 
-  Serial.print(vMag.arr[0]); Serial.print(vMag.arr[1]); Serial.print(vMag.arr[2]);
-  Serial.println();
-  Serial.print("vector acclerometer: ");
-  Serial.print(vAcc.arr[0]); Serial.print(vAcc.arr[1]); Serial.print(vAcc.arr[2]);
-  Serial.println();
-  
-  float magAcc= getMagAccel(vAcc);
-  spdCurr= spdPrev + magAcc*unitTime;
-  spdCurrAbs= abs(spdCurr);
-  dist+= abs((spdPrev+spdCurr)*unitTime/(float)2);
+//  Serial.print("Vector magnetometer: "); 
+//  Serial.print(vMag.x); Serial.print(vMag.y); Serial.print(vMag.z);
+//  Serial.println();
+//  Serial.print("vector acclerometer: ");
+//  Serial.print(vAcc.x); Serial.print(vAcc.y); Serial.print(vAcc.z);
+//  Serial.println();
 
-  float heading= getHeading(vMag);
-  String headingT= getHeadingText(heading);
+  //float error = getMagAccel(vAcc) * unitTime;
+
+    float magAcc = getMagAccel(vAcc) - 9.81;
+
+    if (magAcc < 0.5) {
+      magAcc = 0;
+      spdPrev = 0;
+    }
+
+    if (vAcc.y < 0) {
+      magAcc = -magAcc;
+    }
+
+    spdCurr = spdPrev + magAcc*unitTime;
   
-  Serial.print("Current speed: "); Serial.println(spdCurr);
-  Serial.print("Current speed, absolute: "); Serial.println(spdCurr);
-  Serial.print("Distance traveled: "); Serial.println(dist);
-  Serial.print("Magnetic heading: "); Serial.println(heading);
-  Serial.print("Magnetic heading, text: "); Serial.println(headingT.c_str());
+//  spdCurr= spdPrev + magAcc*unitTime;
+//  spdCurrAbs= abs(spdCurr);
+ //dist+= abs((magSpd)*unitTime/(float)2);
+//
+//  float heading= getHeading(vMag);
+//  String headingT= getHeadingText(heading);
+
+   if (abs(spdCurr) > 0) { 
+Serial.print("Current speed: "); Serial.print(spdCurr); Serial.print(" Accel: "); Serial.println(getMagAccel(vAcc));
+   }
+//  Serial.print("Current speed, absolute: "); Serial.println(spdCurr);
+//  Serial.print("Distance traveled: "); Serial.println(dist);
+//  Serial.print("Magnetic heading: "); Serial.println(heading);
+//  Serial.print("Magnetic heading, text: "); Serial.println(headingT.c_str());
 
   spdPrev= spdCurr;
-  delay(500);
+  //delay(500);
 }
 
 int readTemp(uint8_t i) {
@@ -126,34 +144,35 @@ void setupAccel() {
 vect getVectorMagne() {
   sensors_event_t event;
   mag.getEvent(&event);
-  vect v= {{event.magnetic.x, event.magnetic.y, event.magnetic.z}};
+  vect v= {event.magnetic.x, event.magnetic.y, event.magnetic.z};
   return v;
 }
 
 vect getVectorAccel() {
   sensors_event_t event;
   accel.getEvent(&event);
-  vect v= {{event.acceleration.x, event.acceleration.y, event.acceleration.z}};
+  vect v= {event.acceleration.x, event.acceleration.y, event.acceleration.z};
   return v;  
 }
 
 // A 1D vector 
 float getMagAccel(vect vAcc) {
-  float x= vAcc.arr[0];
-  float y= vAcc.arr[1];
-  float z= vAcc.arr[2] - 9.8;
+  float x= vAcc.x;
+  float y= vAcc.y;
+  float z= vAcc.z;
   float sumSquares= square(x) + square(y) + square(z);
-  return sumSquares>=0 ? sqrt(sumSquares) : -sqrt(-sumSquares);
+  
+  return sqrt(sumSquares);
 }
 
 // Can be negative 
 float square(float x) {
-  return x>=0 ? x*x : -x*x; 
+  return x*x;
 }
 
 // Between 0, 360 
 float getHeading(vect vMag) {
-  float heading= (atan2(vMag.arr[1], vMag.arr[0]) * 180) / 3.14159;
+  float heading= (atan2(vMag.y, vMag.x) * 180) / 3.14159;
   if (heading < 0)
   {
     heading+= 360;
